@@ -9,6 +9,7 @@
 %\documentclass[twocolumn]{article}
 \documentclass{article}
 \usepackage{authblk}          % For 2+ authors
+\usepackage{url}
 
 \newcommand{\RNum}[1]{\uppercase\expandafter{\romannumeral #1\relax}}
 
@@ -17,9 +18,8 @@
 
 \title{A Coverage Likelihood for HLA Typing.}
 \author[1]{Leonid Rozenberg\thanks{leonid.rozenberg@mssm.edu}}
-\author[2]{Andrew Kasarskis\thanks{ TODO }}
+\author[1]{Andrew Kasarskis\thanks{ TODO }}
 \affil[1]{Department of Genetics and Genomic Sciences, Icahn School of Medicine at Mount Sinai, New York, New York, USA }
-\affil[2]{Department of Genetics and Genomic Sciences, Icahn School of Medicine at Mount Sinai, New York, New York, USA }
 %\date{\today}
 \maketitle
 
@@ -36,14 +36,67 @@
 \section{Introduction}
 % The Introduction should put the focus of the manuscript into a broader context. As you compose the Introduction, think of readers who are not experts in this field. Include a brief review of the key literature. If there are relevant controversies or disagreements in the field, they should be mentioned so that a non-expert reader can delve into these issues further. The Introduction should conclude with a brief statement of the overall aim of the experiments and a comment about whether that aim was achieved.
 
-% What is HLA-typing?
+In the results and discussions section of \cite{Prohlatype} we described how
+computing the HLA diploid posterior,
+via likelihoods derived from the emission probability of Profile Hidden Markov Models (PHMM),
+could result in pathological cases.
+Due to the HLA regions tremendous heterogeneity,
+there arose cases where the assignment of reads to most likely alleles was asymmetric,
+because one allele's SNP was observed in one read,
+without support in any other reads.
+And where no other polymorphism in the allele, or in the region surrounding it,
+could help the likelihood discern the most likely alleles.
+Consequently, this likelihood was considered the best, but at the cost of assigning 59 (out of 60)
+reads to one of the alleles (the one without the SNP) and only one read to the other allele.
+This conflicts with our, prior belief that such sampling of read data is unlikely.
 
-See first paper.
+In the current work we describe a likelihood calculation that formalizes that intuition.
+This technique may be considered a form of regularization\cite{TODO} where we
+constrain the solution set, but technically it is not.
+It is another likelihood that integrates more information about the posterior
+distribution.
 
 \section{Results}
 % The Results section should provide details of all of the experiments that are required to support the conclusions of the paper. There is no specific word limit for this section, but details of experiments that are peripheral to the main thrust of the article and that detract from the focus of the article should not be included. The section may be divided into subsections, each with a concise subheading. The section should be written in the past tense.
 
-Math goes here.
+Assume that $n$ reads of length $l$ originate\footnote{The astute reader will
+notice that a PHMM's forward pass allows us to quickly determine where a read
+\emph{ends}. The analysis described here considers where a read starts, but the
+ends lead to a synonymous formula.}
+in a genome of length $g$ ($g>l$), let $k=g-l$.
+Further, assume that the read start location's are independent.
+There are $k^{n}$ possible ways to place $n$ independent things into $k$ positions.
+Let $S_{i}$ be the random variable of the number of positions starting at $i$.
+Consider the first positions in $g$, and the probability of $P(S_{0} = m_{0})$ reads starting there.
+If $m_0=0$ then all $n$ reads must originate at subsequent positions and there
+are $(k-1)^{n}$ ways that can happen.
+If $m_0 > 0$, after we choose $m_0$ reads for the first position,
+there are $(k-1)^{n-m_{0}}$ ways to position the rest.
+Note that there ${n \choose 0} = 1$ so the first case can be combined into:
+
+\begin{equation}
+  P(S_{0} = m) = \frac{{n \choose m} (k-1)^{n-m}}{k^{n}}
+\end{equation}
+
+But we would like to form the joint distribution over all positions,
+and consider the probability of $m_{i}$ reads at position $S_{i}$ and note that
+we can reduce the problem to base case if $n_{i}$ reads are left to be assigned.
+Consequently, $S_{i}$ is not Markovian because it does not just depend on $S_{i-1}$,
+but on all previous observations ($S_{0} \ldots S_{i-1}$).
+Let $n_{i} = \sum_{i=0}^{i-1} m_{i}$, and then we have
+
+\begin{equation}
+  P(S_{i} = m_i | S_{0}\ldots S_{i-1}) = \frac{{n_i \choose m_i} (k-i-1)^{n_i-m_i}}{(k-i)^{n_i}}
+\end{equation}
+
+Explicitly, the probability of observing reads at given positions
+$\{ m_{0} \ldots m_{k} \}$ is
+
+\begin{equation}
+  P(S_{0} \ldots S_{k} = m_{0} \ldots m_{k} ) =
+    \prod_{i=0}^{k} \frac{{n_{i}\choose m_{i}} (k-i-1)^{n_{i}-m_{i}}}{(k-i)^{n_i}}
+\end{equation}
+
 
 \section{Implementation}
 
