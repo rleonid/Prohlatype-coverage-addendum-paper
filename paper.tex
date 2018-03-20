@@ -59,43 +59,62 @@ distribution.
 \section{Results}
 % The Results section should provide details of all of the experiments that are required to support the conclusions of the paper. There is no specific word limit for this section, but details of experiments that are peripheral to the main thrust of the article and that detract from the focus of the article should not be included. The section may be divided into subsections, each with a concise subheading. The section should be written in the past tense.
 
+\subsection{Derivation}
 Assume that $n$ reads of length $l$ originate\footnote{The astute reader will
 notice that a PHMM's forward pass allows us to quickly determine where a read
 \emph{ends}. The analysis described here considers where a read starts, but the
 ends lead to a synonymous formula.}
-in a genome of length $g$ ($g>l$), let $k=g-l$.
+in a genome of length $g$ ($g>l$).
+Let $k=g-l$, so that we can define ``originate'' to mean that the read was produced
+by copying some segment entirely inside $g$,
+and therefore started in the first $k$ positions.
 Further, assume that the read start location's are independent.
+This is a contentious assumption that we will discuss further.
+
+Let $S_{i}$ be the random variable of the number of reads starting at position $i$,
+and we are interested in the joint probability $P(S_{0} \ldots S_{k})$. % = \mathbf{m})$,
+% where $\mathbf{m}=(m_{0}\ldots m_{k})$ and $ m_{i} \geq 0$.
+
 There are $k^{n}$ possible ways to place $n$ independent things into $k$ positions.
-Let $S_{i}$ be the random variable of the number of positions starting at $i$.
-Consider the first positions in $g$, and the probability of $P(S_{0} = m_{0})$ reads starting there.
-If $m_0=0$ then all $n$ reads must originate at subsequent positions and there
+Now, consider the first positions in $g$, the probability of $P(S_{0} = m_{0})$.
+If $m_{0}=0$ then all $n$ reads must originate at subsequent positions and there
 are $(k-1)^{n}$ ways that can happen.
-If $m_0 > 0$, after we choose $m_0$ reads for the first position,
+If $m_{0} > 0$, after we choose $m_{0}$ reads for the first position,
 there are $(k-1)^{n-m_{0}}$ ways to position the rest.
-Note that there ${n \choose 0} = 1$ so the first case can be combined into:
+Since ${n \choose 0} = 1$ the cases can be combined into
 
 \begin{equation}
-  P(S_{0} = m) = \frac{{n \choose m} (k-1)^{n-m}}{k^{n}}
+  P(S_{0} = m) = \frac{{n \choose m} (k-1)^{n-m}}{k^{n}}.
 \end{equation}
 
-But we would like to form the joint distribution over all positions,
-and consider the probability of $m_{i}$ reads at position $S_{i}$ and note that
-we can reduce the problem to base case if $n_{i}$ reads are left to be assigned.
-Consequently, $S_{i}$ is not Markovian because it does not just depend on $S_{i-1}$,
-but on all previous observations ($S_{0} \ldots S_{i-1}$).
-Let $n_{i} = \sum_{i=0}^{i-1} m_{i}$, and then we have
+In order to form the joint distribution,
+factorize it by the positions,
+and consider $P(S_{i}| S_{0}\ldots S_{i-1})$.
+Since know how many reads were observed in all the previous positions,
+we can compute how many are left ($n_{i} = n - \sum_{j=0}^{i-1} m_{j}$)
+and the problem reduces to the base case
 
 \begin{equation}
-  P(S_{i} = m_i | S_{0}\ldots S_{i-1}) = \frac{{n_i \choose m_i} (k-i-1)^{n_i-m_i}}{(k-i)^{n_i}}
+  P(S_{i} = m_i | S_{0}\ldots S_{i-1}) = \frac{{n_i \choose m_i} (k-i-1)^{n_i-m_i}}{(k-i)^{n_i}}.
 \end{equation}
 
-Explicitly, the probability of observing reads at given positions
-$\{ m_{0} \ldots m_{k} \}$ is
-
+And after multiplying the factorization we have
 \begin{equation}
-  P(S_{0} \ldots S_{k} = m_{0} \ldots m_{k} ) =
-    \prod_{i=0}^{k} \frac{{n_{i}\choose m_{i}} (k-i-1)^{n_{i}-m_{i}}}{(k-i)^{n_i}}
+  P(S_{0} \ldots S_{k}) = P(S_{0}) P(S_{1} | S_{0}) \cdots P(S_{k}|S_{0}\ldots S_{k-1}) = \prod_{i=0}^{k} \frac{{n_{i}\choose m_{i}} (k-i-1)^{n_{i}-m_{i}}}{(k-i)^{n_i}}
 \end{equation}
+
+For the diploid case, we take the product of the likelihood for the two
+observations.
+
+\subsection{Assumptions}
+
+Uniformity is not strictly necessary, we can provide a prior as a probability
+simplex over the positions.
+But we would want to use the same prior for both alleles.
+
+We're also assuming that the observation likelihood (the emission from PHMM) is
+independent from this assignment/coverage likelihood, need to think about this
+a bit more.
 
 
 \section{Implementation}
