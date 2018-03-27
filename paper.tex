@@ -10,6 +10,9 @@
 \documentclass{article}
 \usepackage{authblk}          % For 2+ authors
 \usepackage{url}
+\usepackage{mathtools}        % Improvement over asmath, for example adds:
+                              % \begin{align}
+\usepackage{comment}
 
 \newcommand{\RNum}[1]{\uppercase\expandafter{\romannumeral #1\relax}}
 
@@ -28,7 +31,7 @@
 
 \begin{abstract}
 
-  We describe a novel likelihood based upon how reads \emph{cover}
+  We describe a likelihood based upon how reads \emph{cover}
   a loci to facilitate calculating accurate HLA genotype posteriors.
 
 \end{abstract}
@@ -36,21 +39,39 @@
 \section{Introduction}
 % The Introduction should put the focus of the manuscript into a broader context. As you compose the Introduction, think of readers who are not experts in this field. Include a brief review of the key literature. If there are relevant controversies or disagreements in the field, they should be mentioned so that a non-expert reader can delve into these issues further. The Introduction should conclude with a brief statement of the overall aim of the experiments and a comment about whether that aim was achieved.
 
+Coverage in the genomic analysis field describes how reads,
+copies of smaller segments of biological sequences,
+align against their source.
+Much of the current literature on coverage focuses on
+estimating how many reads are necessary to provide sufficient depth at loci,
+given inference targets\cite{Wendl2008};
+reads have errors for their observations and we need to aggregate multiple
+observations to reduce uncertainty.
+These techniques assume that the positions of the reads,
+on their origin,
+is uniformly distributed and is not concerned with that empirical distribution.
+
 In the results and discussions section of \cite{Prohlatype} we described how
 computing the HLA diploid posterior,
-via likelihoods derived from the emission probability of Profile Hidden Markov Models (PHMM),
+using the final emission probability of Profile Hidden Markov Models (PHMM)
+as the likelihood,
 could result in pathological cases.
 Due to the HLA regions tremendous heterogeneity,
-there arose cases where the assignment of reads to most likely alleles was asymmetric,
-because one allele's SNP was observed in one read,
-without support in any other reads.
-And where no other polymorphism in the allele, or in the region surrounding it,
-could help the likelihood discern the most likely alleles.
-Consequently, this likelihood was considered the best, but at the cost of assigning 59 (out of 60)
-reads to one of the alleles (the one without the SNP) and only one read to the other allele.
-This conflicts with our, prior belief that such sampling of read data is unlikely.
+there arose cases where the assignment of reads to most likely alleles was
+asymmetric between two candidates of a diploid pair.
+One allele's SNP was observed in one read,
+without support in any other reads,
+in a region without other polymorphisms
+that could discern the most likely allele.
+Consequently, this pair of alleles,
+was considered the best, but at the cost of
+assigning only 1 read to the allele with the SNP
+and 59 (out of the 60 originating from that region) to the one without.
+This conflicts with our, prior, belief that such coverage is unlikely
+as reads should come from both alleles ``evenly.'' 
 
-In the current work we describe a likelihood calculation that formalizes that intuition.
+In the current work we describe a likelihood calculation that formalizes that
+intuition.
 This technique may be considered a form of regularization\cite{TODO} where we
 constrain the solution set, but technically it is not.
 It is another likelihood that integrates more information about the posterior
@@ -59,7 +80,8 @@ distribution.
 \section{Results}
 % The Results section should provide details of all of the experiments that are required to support the conclusions of the paper. There is no specific word limit for this section, but details of experiments that are peripheral to the main thrust of the article and that detract from the focus of the article should not be included. The section may be divided into subsections, each with a concise subheading. The section should be written in the past tense.
 
-\subsection{Derivation}
+\subsection[Derivation]{Derivation\footnote{For a step-by-step derivation consult the appendix.}}
+
 Assume that $n$ reads of length $l$ originate\footnote{The astute reader will
 notice that a PHMM's forward pass allows us to quickly determine where a read
 \emph{ends}. The analysis described here considers where a read starts, but the
@@ -68,50 +90,41 @@ in a genome of length $g$ ($g>l$).
 Let $k=g-l$, so that we can define ``originate'' to mean that the read was produced
 by copying some segment entirely inside $g$,
 and therefore started in the first $k$ positions.
-Further, assume that the read start location's are independent.
-This is a contentious assumption that we will discuss further.
-
-Let $S_{i}$ be the random variable of the number of reads starting at position $i$,
-and we are interested in the joint probability $P(S_{0} \ldots S_{k})$. % = \mathbf{m})$,
-% where $\mathbf{m}=(m_{0}\ldots m_{k})$ and $ m_{i} \geq 0$.
-
-There are $k^{n}$ possible ways to place $n$ independent things into $k$ positions.
-Now, consider the first positions in $g$, the probability of $P(S_{0} = m_{0})$.
-If $m_{0}=0$ then all $n$ reads must originate at subsequent positions and there
-are $(k-1)^{n}$ ways that can happen.
-If $m_{0} > 0$, after we choose $m_{0}$ reads for the first position,
-there are $(k-1)^{n-m_{0}}$ ways to position the rest.
-Since ${n \choose 0} = 1$ the cases can be combined into
-
+Further suppose that we are given a simplex of probabilities,
+starting at a position $p_{i}$
+($i=1\ldots k$ and $\sum_{i=1}^{k}p_{i} = 0$).
+If we let $m_{i}$ stand for the observation of the number of reads starting at position $i$,
+and $C_{i}$ for the same random variable,
+then for a given allele $A_{x}$ the vector $\mathbf{C}=(C_{1} \ldots C_{k})$
+follows a multinomial distribution with a probability mass function of
 \begin{equation}
-  P(S_{0} = m) = \frac{{n \choose m} (k-1)^{n-m}}{k^{n}}.
+  P(\mathbf{C}|A_{x}) = \frac{n!}{m_{1}! \cdots m_{k}!} \prod_{i=1}^{k}p_{i}^{m_{i}}
+\end{equation}
+where $n=\sum_{i=1}^{k}m_{i}$.
+
+In the diploid case,
+it is easy to see that these coverage samples are independent;
+we observe two different $\mathbf{C}_{x},\mathbf{C}_{y}$ coverage patterns,
+consequently we can take the product
+\begin{equation}
+  P(\mathbf{C}|A_{x},A_{y}) = P(\mathbf{C_{x}}|A_{x}) P(\mathbf{C_{y}}|A_{y}).
 \end{equation}
 
-In order to form the joint distribution,
-factorize it by the positions,
-and consider $P(S_{i}| S_{0}\ldots S_{i-1})$.
-Since know how many reads were observed in all the previous positions,
-we can compute how many are left ($n_{i} = n - \sum_{j=0}^{i-1} m_{j}$)
-and the problem reduces to the base case
+Given the $p_{i}$, it seems natural to ask why we need another function;
+why not just weigh the initial position of the PHMM?
+The two likelihoods track different random variables.
+The emission likelihood ($P(E|A_{x})$) computes probability of observing a single read,
+regardless of position.
+Whereas the coverage likelihood ($P(\mathbf{C}|A_{x})$) computes the probability of observing
+reads at various positions in the loci.
 
-\begin{equation}
-  P(S_{i} = m_i | S_{0}\ldots S_{i-1}) = \frac{{n_i \choose m_i} (k-i-1)^{n_i-m_i}}{(k-i)^{n_i}}.
-\end{equation}
+\subsection{In practice}
 
-And after multiplying the factorization we have
-\begin{equation}
-  P(S_{0} \ldots S_{k}) = P(S_{0}) P(S_{1} | S_{0}) \cdots P(S_{k}|S_{0}\ldots S_{k-1}) = \prod_{i=0}^{k} \frac{{n_{i}\choose m_{i}} (k-i-1)^{n_{i}-m_{i}}}{(k-i)^{n_i}}
-\end{equation}
+The two likelihoods track slightly different information.
 
-For the diploid case, we take the product of the likelihood for the two
-observations.
-
-\subsection{Assumptions}
-
-Uniformity is not strictly necessary, we can provide a prior as a probability
-simplex over the positions.
-But we would want to use the same prior for both alleles.
-
+The emission likelihood is a per read measure,
+while coverage is an aggregate positional measure.
+TODO
 We're also assuming that the observation likelihood (the emission from PHMM) is
 independent from this assignment/coverage likelihood, need to think about this
 a bit more.
@@ -119,9 +132,16 @@ a bit more.
 
 \section{Implementation}
 
+We extended the implementation of prohlatype 
+\url{https://github.com/hammerlab/prohlatype}
+to track all the emission points and
+include this calculation in the combined likelihood
+for the final posterior.
+
 \section{Conclusions}
 
-It resolves that bad C case.
+Our new results show complete concordance with the data set that was
+independently verified by a commercial lab.
 
 \clearpage
 
@@ -131,5 +151,96 @@ It resolves that bad C case.
 \clearpage
 
 \appendix
+
+\subsection{Step-by-Step Derivation}
+
+A simpler way to derive the previous result starts by considering the number
+of ways that reads can start in different segments.
+For clarity of exposition,
+we assume that each position is independent
+and has identical probability ($1/k$) of being chosen.
+
+Let $C_{i}$ be the random variable of the number of reads starting at position
+$i$ 
+and we are interested in the joint probability $P(\mathbf{C})=P(C_{1} \ldots C_{k})$.
+In our case, $C_{i}$ has a value for some given allele $A_{x}$,
+and the following probabilities are implicitly conditional.
+
+There are $k^{n}$ possible ways to place $n$ independent things into $k$ positions.
+Now, consider the first positions in $g$, the probability of $P(C_{1} = m_{1})$.
+If $m_{1}=0$ then all $n$ reads must originate at subsequent positions and there
+are $(k-1)^{n}$ ways that can happen.
+If $m_{1} > 0$, after we choose $m_{1}$ reads for the first position,
+there are $(k-1)^{n-m_{1}}$ ways to position the rest.
+Since ${n \choose 0} = 1$ the cases can be combined into
+
+\begin{equation}
+  P(C_{1} = m) ={n \choose m}\frac{(k-1)^{n-m}}{k^{n}}. \nonumber
+\end{equation}
+
+In order to form the joint distribution,
+factorize it by the positions,
+and consider $P(C_{i}| C_{1}\ldots C_{i-1})$.
+Since know how many reads were observed in all the previous positions,
+we can compute how many are left ($n_{i} = n - \sum_{j=1}^{i-1} m_{j}$)
+and the problem reduces to the base case
+
+\begin{equation}
+  P(C_{i} = m_i | C_{1}\ldots C_{i-1}) = {n_i \choose m_i} \frac{(k-i)^{n_i-m_i}}{(k+1-i)^{n_i}}. \nonumber
+\end{equation}
+
+And after multiplying the factorization we have
+\begin{equation}
+  P(C_{1} \ldots C_{k}) = P(C_{1}) P(C_{2} | C_{1}) \cdots P(C_{k}|C_{1}\ldots C_{k-1}) = \prod_{i=1}^{k} {n_{i}\choose m_{i}} \frac{(k-i)^{n_{i}-m_{i}}}{(k+1-i)^{n_i}} \nonumber
+\end{equation}
+
+If we group the combinations
+
+\begin{align}
+  \prod_{i=1}^{k} {n_{i}\choose m_{i}} &=
+  \frac{n!}{m_{1}!(n-m_{1})!} \frac{(n-m_{1})!}{m_{2}!(n-m_{1}-m_{2})!} \cdots
+      \frac{(n-m_{1}\cdots - m_{k-1})!}{m_{k}!(n-m_{1}\cdots - m_{k})!} 
+  \nonumber \\
+  &= \frac{n!}{m_{1}!m_{2}!\cdots m_{k}!} \nonumber
+\end{align}
+and the products
+
+\begin{align}
+  \prod_{i=1}^{k} \frac{(k-i)^{n_{i}-m_{i}}}{(k+1-i)^{n_i}} &=
+    \frac{(k-1)^{n-m_{1}}}{k^{n}}\frac{(k-2)^{n-m_{1}-m_{2}}}{(k-1)^{n-m_{1}}} \cdots
+    \frac{(k-k)^{n_{i}-m_{1}\cdots-m_{k}}}{(k+1-k)^{n_{i}-m_{1}\cdots-m_{k-1}}} \nonumber \\ 
+  &= \frac{1}{k^{n}} = \left(\frac{1}{k}\right)^{m_{1}+\cdots+m_{k}} \nonumber \\
+\end{align}
+Since $\frac{1}{k}$ is the probability of each possible position,
+when we combine the two terms we recover the multinomial
+probability mass function.
+
+\begin{comment}
+\end{comment}
+
+\begin{comment}
+For the diploid case, we take the product of the likelihood for the two
+alleles separately.
+Making the implicit allele assumption explicit,
+for a diploid of $A_{x},A_{y}$,
+let $m_{i}$ be the number of reads at position $i$ for $A_{x}$
+($n$, and $n_{i}$ as previously)
+and $o_{i}$ be the number of reads at position $i$ for $A_{y}$
+($p$ and $p_{i}$ like $n$ and $n_{i}$ respectively but for $A_{y}$)
+the new coverage likelihood is
+\begin{align}
+  P(\textnormal{coverage}|A_{x}, A_{y}) &=
+    P(C_{0} \ldots C_{k} | A_{x}) 
+    P(C_{0} \ldots C_{k} | A_{y})  \nonumber \\
+    &= \prod_{i=0}^{k} {n_{i}\choose m_{i}}\frac{(k-i-1)^{n_{i}-m_{i}}}{(k-i)^{n_i}} 
+       \prod_{i=0}^{k} {p_{i}\choose o_{i}}\frac{(k-i-1)^{p_{i}-o_{i}}}{(k-i)^{p_i}} \nonumber \\
+%    &= \prod_{i=0}^{k} \frac{{n_{i}\choose m_{i}} (k-i-1)^{n_{i}-m_{i}}}{(k-i)^{n_i}}
+%                       \frac{{p_{i}\choose o_{i}} (k-i-1)^{p_{i}-o_{i}}}{(k-i)^{p_i}} \nonumber \\
+    &= \prod_{i=0}^{k} {n_{i}\choose m_{i}}{p_{i}\choose o_{i}}
+                        \frac{(k-i-1)^{n_{i}-m_{i}+p_{i}-o_{i}}}
+                              {(k-i)^{n_{i}+p_{i}}}
+\end{align}
+
+\end{comment}
 
 \end{document}
