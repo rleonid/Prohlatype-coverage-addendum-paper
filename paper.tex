@@ -104,8 +104,8 @@ where $n=\sum_{i=1}^{k}m_{i}$.
 
 In the diploid case,
 it is easy to see that these coverage samples are independent;
-we observe two different $\mathbf{C}_{x},\mathbf{C}_{y}$ coverage patterns,
-consequently we can take the product
+we observe two different $\mathbf{C}_{x},\mathbf{C}_{y}$ coverage patterns
+and consequently we can take the product
 \begin{equation}
   P(\mathbf{C}|A_{x},A_{y}) = P(\mathbf{C_{x}}|A_{x}) P(\mathbf{C_{y}}|A_{y}).
 \end{equation}
@@ -113,22 +113,24 @@ consequently we can take the product
 Given the $p_{i}$, it seems natural to ask why we need another function;
 why not just weigh the initial position of the PHMM?
 The two likelihoods track different random variables.
-The emission likelihood ($P(E|A_{x})$) computes probability of observing a single read,
+The emission likelihood ($P(E|A)$)
+computes probability of observing a single read,
 regardless of position.
-Whereas the coverage likelihood ($P(\mathbf{C}|A_{x})$) computes the probability of observing
-reads at various positions in the loci.
+Whereas the coverage likelihood ($P(\mathbf{C}|A)$) computes the probability
+of observing all the reads at various positions in the loci.
+But we only know these start positions by previously computing the emissions
+over all possible positions
+(the emission likelihood is the average of those)
+and using the maximum\footnote{Similar to, but different from, a Viterbi pass.}.
+Therefore to accurately track dependencies we should write
+$P(\mathbf{C}|E, A)$.
 
-\subsection{In practice}
-
-The two likelihoods track slightly different information.
-
-The emission likelihood is a per read measure,
-while coverage is an aggregate positional measure.
-TODO
-We're also assuming that the observation likelihood (the emission from PHMM) is
-independent from this assignment/coverage likelihood, need to think about this
-a bit more.
-
+To derive a final allele posterior we extend Bayes rule to two events:
+\begin{equation}
+  P(A|E,C) = \frac{P(A,E,C)}{P(E,C)} = \frac{P(C|E,A)P(E|A)P(A)}{P(C|E)P(E)}
+\end{equation}
+and since $C$ is determined by $E$ ($P(C|E)=1$),
+we only need to multiply our previous likelihood by the coverage one.
 
 \section{Implementation}
 
@@ -141,7 +143,7 @@ for the final posterior.
 \section{Conclusions}
 
 Our new results show complete concordance with the data set that was
-independently verified by a commercial lab.
+independently verified by a commercial lab (n=30).
 
 \clearpage
 
